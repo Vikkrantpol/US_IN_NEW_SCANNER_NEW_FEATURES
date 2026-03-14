@@ -1,0 +1,36 @@
+{
+  "_template": true,
+  "_note": "Non-production placeholder values. Copy this file to .scanner_secrets/scan_conditions.json or point SCAN_CONDITIONS_FILE at a private copy and replace every value with your own local thresholds.",
+  "us": {
+    "primary": {
+      "high_lookback": 1,
+      "price_from_high": 0.0,
+      "turnover_window": 1,
+      "ema_periods": [1, 2, 3],
+      "min_turnover_m": 0.0
+    },
+    "scoring": {
+      "near_high_pct": 0.0,
+      "volume_spike_ratio": 0.0,
+      "eps_growth_min": 0.0,
+      "revenue_growth_min": 0.0
+    }
+  },
+  "india": {
+    "primary": {
+      "high_lookback": 1,
+      "price_from_high": 0.0,
+      "turnover_window": 1,
+      "ema_periods": [1, 2, 3],
+      "min_turnover_cr": 0.0
+    },
+    "scoring": {
+      "near_high_pct": 0.0,
+      "volume_spike_ratio": 0.0,
+      "eps_growth_min": 0.0,
+      "revenue_growth_min": 0.0,
+      "upper_circuit_pct": 0.0,
+      "delivery_pct_min": 0.0
+    }
+  }
+}

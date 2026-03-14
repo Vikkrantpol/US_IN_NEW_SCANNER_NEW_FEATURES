@@ -1,0 +1,36 @@
+.DS_Store
+
+# Local secrets and machine-specific config
+.scanner_secrets/
+scan_conditions.local.json
+.env
+.env.local
+.env.*
+!.env.example
+
+# Python environments and caches
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Runtime outputs, archives, and logs
+scanner_results.json
+scanner_results_*.json
+india_results.json
+india_results_*.json
+scan_state.db
+scan_state.db-*
+scan_mega_history.db
+scan_mega_history.db-*
+scanner_scanned.txt
+india_scanned.txt
+fyersApi.log
+fyersRequests.log
+exports/
+backups/
+*.bak
+
+# Regenerable market universe downloads
+us_stocks_100m_10b_full.csv

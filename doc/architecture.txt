@@ -1,0 +1,196 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                     US & INDIA STOCK SCANNER — ARCHITECTURE                 ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+
+================================
+  PROJECT OVERVIEW
+================================
+
+  Dual-market stock scanner with:
+  - US pipeline driven by a prebuilt CSV universe
+  - India pipeline driven by live NSE symbol discovery
+  - Threaded chunk scanning in both scanners
+  - Incremental daily re-scanning based on prior score/failure history
+  - Daily result snapshots for dashboard comparisons
+  - Browser dashboard with watchlist, sparkline, delta, copy, and CSV export
+
+
+================================
+  FILE STRUCTURE & GENERATED DATA
+================================
+
+  US_IN_New_Scanner/
+  │
+  ├── 100M_10B_Market_Cap.py      ← Builds US stock universe CSV
+  ├── scanner.py                  ← US scanner, 0-7 score
+  ├── india_scanner.py            ← India scanner, 0-9 score
+  ├── dashboard.html              ← Shared dashboard for both markets
+  │
+  ├── start_scan.sh               ← US launcher
+  ├── India_scan.sh               ← India launcher
+  ├── start_dashboard.sh          ← HTTP server launcher
+  │
+  ├── us_stocks_100m_10b_full.csv ← [GENERATED] US universe
+  ├── scanner_results.json        ← [GENERATED] live US results
+  ├── scanner_results_YYYY-MM-DD.json
+  ├── scan_state.db               ← [GENERATED] SQLite working state DB
+  ├── scan_mega_history.db        ← [GENERATED] permanent archive DB
+  ├── india_results.json          ← [GENERATED] live India results
+  ├── india_results_YYYY-MM-DD.json
+  ├── scanner_scanned.txt         ← [LEGACY] imported on first US DB-backed run
+  ├── india_scanned.txt           ← [LEGACY] imported on first India DB-backed run
+  ├── scanned_tickers.txt         ← [GENERATED] downloader history
+  └── doc/                        ← documentation
+
+  SQLite state tables:
+    latest_scan_state   ← latest per-market ticker/symbol state
+    scan_history        ← append-only scan events
+    scan_runs           ← run metadata
+    scan_snapshots      ← snapshot file metadata
+
+  Snapshot retention:
+    keep latest 7 dated result files per market
+
+
+================================
+  HIGH-LEVEL FLOW
+================================
+
+  NASDAQ API ──> 100M_10B_Market_Cap.py ──> us_stocks_100m_10b_full.csv
+                                                │
+                                                ▼
+                                      scanner.py (US)
+                                      - chunks of 20
+                                      - 4 worker threads
+                                      - yfinance OHLCV + fundamentals
+                                      - atomic chunk save
+                                      - daily snapshot after full run
+                                                │
+                                                ├── scanner_results.json
+                                                ├── scanner_results_YYYY-MM-DD.json
+                                                ├── scan_state.db
+                                                └── scan_mega_history.db
+
+  NSE equity list / Nifty 500 fallback ───────> india_scanner.py (India)
+  Fyers API (optional) ───────────────────────> - chunks of 15
+  NSE quote API ──────────────────────────────> - 4 worker threads
+  yfinance fallback / fundamentals ──────────> - atomic chunk save
+                                                - daily snapshot after full run
+                                                │
+                                                ├── india_results.json
+                                                ├── india_results_YYYY-MM-DD.json
+                                                ├── scan_state.db
+                                                └── scan_mega_history.db
+
+  Current JSON + older snapshots ─────────────> dashboard.html
+  Browser localStorage ───────────────────────> watchlist persistence
+
+
+================================
+  SCANNER INTERNALS
+================================
+
+  US scanner:
+  - reads static descriptive fields from CSV
+  - fetches 2 years of OHLCV via yfinance
+  - applies 5 primary gates
+  - computes 0-7 score
+  - stores closes_30d for dashboard sparkline rendering
+
+  India scanner:
+  - loads symbols from NSE
+  - fetches OHLCV from Fyers or yfinance fallback
+  - applies 5 primary gates
+  - computes 0-9 score
+  - adds delivery %, circuit information, cap category
+  - stores closes_30d for dashboard sparkline rendering
+
+  Both scanners:
+  - use ThreadPoolExecutor(max_workers=4) per chunk
+  - keep results/scanned state behind threading.Lock()
+  - preserve per-ticker retry handling inside worker threads
+  - print ticker output as each worker completes
+  - persist latest state + full run history in SQLite
+  - archive every scan event in a separate permanent SQLite DB
+
+
+================================
+  INCREMENTAL RE-SCAN RULES
+================================
+
+  Re-scan when ANY are true:
+  - never scanned before
+  - previous score >= 3
+  - exactly one primary gate failed last time
+  - last scan is older than 3 days
+
+  Skip only when BOTH are true:
+  - 2 or more primary gates failed last time
+  - last scan is within 3 days
+
+
+================================
+  DASHBOARD ARCHITECTURE
+================================
+
+  dashboard.html
+  │
+  ├── fetch current market file:
+  │     scanner_results.json or india_results.json
+  │
+  ├── fetch newest older snapshot available:
+  │     scanner_results_YYYY-MM-DD.json
+  │     india_results_YYYY-MM-DD.json
+  │
+  ├── localStorage:
+  │     key = signalscan_watchlist
+  │     values = ["US:AAPL", "IN:RELIANCE", ...]
+  │
+  ├── table features:
+  │     - star toggle per row
+  │     - watchlist-only filter with count
+  │     - score badge + score delta
+  │     - sparkline from closes_30d
+  │     - copy visible tickers
+  │     - export visible rows to CSV
+  │
+  └── detail panel:
+        - score summary
+        - condition status
+        - metrics grids
+        - external links
+
+
+================================
+  RESILIENCE FEATURES
+================================
+
+  - Atomic JSON save after each chunk
+  - Snapshot copy after each full scan
+  - Snapshot pruning to latest 7 files
+  - Rate-limit retries per worker
+  - Chunk pauses preserved
+  - Dashboard retry when live JSON is mid-write
+  - Watchlist persists in browser across refresh/restart
+
+
+================================
+  OUTPUTS CONSUMED BY DASHBOARD
+================================
+
+  Live JSON fields used directly:
+  - ticker
+  - name
+  - score / max_score
+  - signals
+  - price
+  - sector
+  - valuation metrics
+  - details.*
+  - closes_30d
+
+  Derived dashboard features:
+  - Sparkline from closes_30d
+  - Delta badge from current score vs previous snapshot score
+  - CSV export from currently filtered rows
