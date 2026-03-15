@@ -4,7 +4,7 @@ Open-source shell-driven market scanner workspace for US equities and India NSE 
 
 This repository is structured so the code can be public while the proprietary scan thresholds and broker credentials stay local-only.
 
-## 📸 Preview
+## Preview
 
 ![Dashboard Overview](doc/screenshots/dashboard_main.png)
 *Modern, IDE-like full-screen dashboard with Control Center and terminal output.*
