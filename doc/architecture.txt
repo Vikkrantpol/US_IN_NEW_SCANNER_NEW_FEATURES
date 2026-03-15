@@ -25,11 +25,17 @@
   ├── 100M_10B_Market_Cap.py      ← Builds US stock universe CSV
   ├── scanner.py                  ← US scanner, 0-7 score
   ├── india_scanner.py            ← India scanner, 0-9 score
+  ├── scan_state.py               ← Database, reporting, and archival logic
+  ├── api.py                      ← FastAPI backend for dashboard & SSE streaming
   ├── dashboard.html              ← Shared dashboard for both markets
   │
   ├── start_scan.sh               ← US launcher
   ├── India_scan.sh               ← India launcher
-  ├── start_dashboard.sh          ← HTTP server launcher
+  ├── start_dashboard.sh          ← Backend and dashboard launcher
+  │
+  ├── scan_conditions_loader.py   ← Resolution logic for private thresholds
+  ├── env_utils.py                ← Environment and path utilities
+  ├── fyers_auth.py               ← Broker authentication helpers
   │
   ├── us_stocks_100m_10b_full.csv ← [GENERATED] US universe
   ├── scanner_results.json        ← [GENERATED] live US results
@@ -38,9 +44,6 @@
   ├── scan_mega_history.db        ← [GENERATED] permanent archive DB
   ├── india_results.json          ← [GENERATED] live India results
   ├── india_results_YYYY-MM-DD.json
-  ├── scanner_scanned.txt         ← [LEGACY] imported on first US DB-backed run
-  ├── india_scanned.txt           ← [LEGACY] imported on first India DB-backed run
-  ├── scanned_tickers.txt         ← [GENERATED] downloader history
   └── doc/                        ← documentation
 
   SQLite state tables:
@@ -84,6 +87,14 @@
                                                 └── scan_mega_history.db
 
   Current JSON + older snapshots ─────────────> dashboard.html
+                                                  │
+  Command Input from Control Center ───────────┐  │
+                                              ▼  │
+  api.py (FastAPI Backend) <──────────────────┘  │
+  - launches shell commands                      │
+  - streams stdout via SSE ──────────────────────┘
+  - results displayed in dashboard terminal
+
   Browser localStorage ───────────────────────> watchlist persistence
 
 
@@ -142,6 +153,11 @@
   ├── fetch newest older snapshot available:
   │     scanner_results_YYYY-MM-DD.json
   │     india_results_YYYY-MM-DD.json
+  │
+  ├── backend interaction (api.py):
+  │     - sends command launch requests
+  │     - receives live stdout stream via EventSource
+  │     - supports US and India specific tool presets
   │
   ├── localStorage:
   │     key = signalscan_watchlist
