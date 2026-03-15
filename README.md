@@ -311,7 +311,7 @@ Only placeholder templates are committed. If you share the working directory man
 
 ## Future Roadmap: Sub-4-Minute Scans
 
-The current 25-minute runtime is primarily limited by the aggressive rate-limiting required for scraping external data providers. To reduce the runtime to **under 4 minutes**, the following architecture is planned:
+The current 15-minute runtime is primarily limited by the aggressive rate-limiting required for scraping external data providers. To reduce the runtime to **under 4 minutes**, the following architecture is planned:
 
 ### 1. Hybrid Scan Architecture
 - **Hard Scan (Weekly)**: Performs full yFinance `.info` lookups for fundamentals (PE, Growth, Margins). These are stored in a local `fundamental_cache`.
